@@ -1,0 +1,38 @@
+name: Actualizar dashboard
+
+on:
+  schedule:
+    # Todos los días a las 07:00 hora CDMX (13:00 UTC)
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}   # permite correrlo manualmente desde la pestaña Actions
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Traer datos de HubSpot
+        env:
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+        run: python scripts/fetch_hubspot.py
+
+      - name: Commitear datos actualizados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/deals.json data/closed.json data/meta.json
+          git diff --staged --quiet || git commit -m "Actualización automática de datos $(date -u +%Y-%m-%d)"
+          git push
