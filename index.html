@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Mendel · Pipeline MX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-950:#0A1830; --navy-900:#0F2142; --navy-800:#16305C;
+    --bg:#F3F5F8; --card:#FFFFFF; --line:#E4E8EF;
+    --ink:#131C2E; --ink-soft:#5B6478; --ink-faint:#8891A3;
+    --accent:#EA580C; --accent-soft:#FEE6D8;
+    --danger:#DC2626; --danger-soft:#FCE4E4;
+    --warn:#D97706; --warn-soft:#FCEDD3;
+    --ok:#16A34A; --ok-soft:#DEF3E5;
+    --purple:#7C3AED; --purple-soft:#F1E9FE;
+    --shadow: 0 1px 2px rgba(19,28,46,.05), 0 6px 18px rgba(19,28,46,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .app{display:flex;min-height:100vh;}
+  .side{width:236px;flex:0 0 236px;background:linear-gradient(175deg,var(--navy-950), var(--navy-800) 130%);color:#fff;padding:22px 16px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh;overflow-y:auto;}
+  .brand .mark{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;}
+  .brand .sub{font-size:11.5px;color:#93A3C2;letter-spacing:.3px;text-transform:uppercase;}
+  .nav-label{font-size:11px;color:#7C8BAC;text-transform:uppercase;letter-spacing:.6px;margin:2px 4px 2px;}
+  .owner-list{display:flex;flex-direction:column;gap:4px;}
+  .owner-pill{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;color:#D7DEEC;font-size:13.5px;font-weight:500;border:1px solid transparent;}
+  .owner-pill:hover{background:rgba(255,255,255,.06);}
+  .owner-pill.active{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.14);color:#fff;}
+  .avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk',sans-serif;flex:0 0 26px;color:#0A1830;}
+  .owner-pill .count{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#93A3C2;}
+  .owner-pill.active .count{color:#fff;}
+  .quota-mini{padding:8px 10px 10px;}
+  .quota-mini-row{display:flex;justify-content:space-between;font-size:11px;color:#B9C3DA;margin-bottom:4px;}
+  .quota-mini-track{height:5px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:12px;}
+  .quota-mini-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#22C55E,#4ADE80);}
+  .side-foot{margin-top:auto;font-size:11px;color:#6B7CA0;line-height:1.5;}
+
+  .main{flex:1;min-width:0;padding:26px 32px 60px;}
+  .topbar{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:14px;}
+  .topbar h1{font-family:'Space Grotesk',sans-serif;font-size:22px;margin:0 0 4px;}
+  .topbar .meta{font-size:12.5px;color:var(--ink-soft);}
+  .refresh-tag{font-size:11.5px;color:var(--ink-soft);background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:20px;display:flex;align-items:center;gap:7px;box-shadow:var(--shadow);}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:5px;cursor:pointer;transition:box-shadow .15s,border-color .15s;}
+  .kpi:hover{border-color:var(--accent);}
+  .kpi.kpi-open{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);}
+  .kpi-detail{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px 18px;margin-bottom:20px;max-height:340px;overflow-y:auto;}
+  .kpi-detail-head{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;margin-bottom:10px;color:var(--ink);}
+  .kpi-detail-row{display:flex;align-items:center;gap:14px;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--line);}
+  .kpi-detail-row>span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px;}
+  .kpi-detail-row>span:not(:first-child){flex:0 0 auto;color:var(--ink-soft);}
+  .kpi-detail-row:last-child{border-bottom:none;}
+  .kpi-detail-empty{font-size:12.5px;color:var(--ink-faint);padding:8px 0;}
+  .kpi .label{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.3px;font-weight:600;}
+  .kpi .value{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.2px;}
+  .kpi .value.accent{color:var(--accent);} .kpi .value.danger{color:var(--danger);} .kpi .value.ok{color:var(--ok);}
+  .kpi .sub{font-size:10.5px;color:var(--ink-faint);}
+
+  /* QUOTA SECTION */
+  .quota-section{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;margin-bottom:20px;}
+  .quota-section h2{font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0 0 4px;}
+  .quota-section .sub-note{font-size:11.5px;color:var(--ink-soft);margin-bottom:14px;}
+  .quota-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .quota-card{border:1px solid var(--line);border-radius:12px;padding:14px;background:#FAFBFD;}
+  .quota-card .rep{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;margin-bottom:10px;}
+  .quota-card .amounts{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .quota-card .logrado{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;}
+  .quota-card .objetivo{font-size:11.5px;color:var(--ink-faint);}
+  .quota-track{height:8px;border-radius:4px;background:#E7EAF1;overflow:hidden;margin-bottom:6px;}
+  .quota-fill{height:100%;border-radius:4px;}
+  .quota-pct{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--ink-soft);}
+  .no-quota-badge{font-size:10.5px;color:var(--warn);background:var(--warn-soft);padding:2px 8px;border-radius:20px;display:inline-block;margin-top:4px;}
+
+  .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line);}
+  .tab{padding:9px 4px;margin-right:22px;font-size:13.5px;font-weight:600;color:var(--ink-faint);cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--ink);border-color:var(--accent);}
+
+  .board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:14px;overflow-x:auto;padding-bottom:8px;}
+  .col{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow);min-height:80px;}
+  .col-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 2px;}
+  .col-head .name{font-size:12px;font-weight:700;}
+  .col-head .n{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);background:var(--bg);padding:2px 7px;border-radius:20px;}
+  .deal-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 11px;margin-bottom:8px;}
+  .deal-card .name{font-size:12.5px;font-weight:600;margin-bottom:5px;line-height:1.3;display:flex;align-items:flex-start;gap:5px;}
+  .deal-card .row2{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--ink-soft);margin-bottom:7px;}
+  .deal-card .amt{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink);}
+  .heat-track{height:5px;border-radius:4px;background:#E7EAF1;overflow:hidden;}
+  .heat-fill{height:100%;border-radius:4px;}
+  .deal-card .footline{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
+  .owner-chip{font-size:10px;font-weight:700;color:var(--ink-soft);}
+  .days-chip{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;}
+
+  .table-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow-x:auto;overflow-y:hidden;}
+  .table-wrap table{min-width:640px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-soft);padding:12px 16px;border-bottom:1px solid var(--line);background:#FAFBFD;cursor:pointer;user-select:none;white-space:nowrap;}
+  thead th:hover{color:var(--ink);}
+  tbody td{padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;} tbody tr:hover{background:#FAFBFD;}
+  .deal-name{font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;}
+  .pipeline-tag{font-size:10.5px;color:var(--ink-faint);}
+  .stage-pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--accent-soft);color:var(--accent);white-space:nowrap;}
+  .amount-cell{font-family:'IBM Plex Mono',monospace;font-weight:600;text-align:right;}
+  .owner-cell{display:flex;align-items:center;gap:8px;}
+  .rel-cell{display:flex;align-items:center;gap:8px;min-width:110px;}
+  .rel-track{flex:1;height:6px;border-radius:4px;background:#E7EAF1;overflow:hidden;}
+  .rel-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#EA580C,#F59E0B);}
+  .rel-num{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px;min-width:26px;text-align:right;}
+  .heat-cell{display:flex;align-items:center;gap:9px;min-width:150px;}
+  .heat-cell .heat-track{flex:1;}
+  .days-num{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12.5px;min-width:34px;text-align:right;}
+  .status-badge{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+  .origen-tag{font-size:10.5px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);padding:2px 8px;border-radius:20px;white-space:nowrap;}
+  .dm-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 8px;}
+  .dm-decisor{background:var(--ok);} .dm-influencer{background:var(--warn);} .dm-operativo{background:#94A3B8;} .dm-sin_contacto{background:#CBD3E1;}
+  .diio-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:var(--purple);background:var(--purple-soft);padding:2px 8px;border-radius:20px;cursor:help;white-space:nowrap;margin-top:4px;}
+
+  /* FORECAST */
+  .forecast-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;}
+  .forecast-row{display:grid;grid-template-columns:110px 1fr 90px 60px;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .forecast-row:last-child{border-bottom:none;}
+  .forecast-row-clickable{cursor:pointer;transition:background .12s;}
+  .forecast-row-clickable:hover{background:#FAFBFD;}
+  .forecast-row-open{outline:2px solid var(--accent);outline-offset:-2px;border-radius:8px;}
+  .forecast-month{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;}
+  .forecast-track{height:14px;border-radius:6px;background:#EEF1F6;overflow:hidden;}
+  .forecast-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#EA580C,#F59E0B);}
+  .forecast-amt{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;text-align:right;}
+  .forecast-n{font-size:11px;color:var(--ink-faint);text-align:right;}
+  .closed-list{margin-top:16px;font-size:12.5px;color:var(--ink-soft);}
+  .closed-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);}
+
+  /* DETALLE VENDEDOR */
+  .detalle-filters{display:flex;gap:8px;margin-bottom:16px;}
+  .filter-btn{padding:8px 16px;border-radius:20px;border:1px solid var(--line);background:var(--card);font-size:12.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;box-shadow:var(--shadow);}
+  .filter-btn.active{background:var(--navy-900);color:#fff;border-color:var(--navy-900);}
+  .detalle-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
+  .summary-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);}
+  .summary-card .label{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.3px;font-weight:600;margin-bottom:6px;}
+  .summary-card .value{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;}
+  .summary-card .sub{font-size:11px;color:var(--ink-faint);margin-top:4px;}
+  .prob-pill{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg);}
+  .detalle-sort{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:12px;color:var(--ink-soft);}
+  .sort-btn{padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--card);font-size:12px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+  .sort-btn.active{background:var(--navy-900);color:#fff;border-color:var(--navy-900);}
+  .sort-btn .arrow{margin-left:4px;font-size:10px;}
+
+  ::-webkit-scrollbar{height:8px;width:8px;} ::-webkit-scrollbar-thumb{background:#CBD3E1;border-radius:8px;}
+  @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr);} .quota-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:900px){.side{position:relative;height:auto;width:100%;flex-basis:auto;} .app{flex-direction:column;}}
+</style>
+</head>
+<body>
+<div id="loadingScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;color:var(--ink-soft);">
+  Cargando pipeline…
+</div>
+<div class="app" id="appRoot" style="display:none;">
+  <aside class="side">
+    <div class="brand"><div class="mark">Mendel</div><div class="sub">Pipeline · México</div></div>
+    <div><div class="nav-label">Equipo</div><div class="owner-list" id="ownerList"></div></div>
+    <div>
+      <div class="nav-label">Objetivo del Q (USD)</div>
+      <div class="quota-mini" id="quotaMini"></div>
+    </div>
+    <div class="side-foot" id="sideFoot">
+      Cargando…
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div><h1 id="pageTitle">Pipeline del equipo</h1><div class="meta" id="pageMeta"></div></div>
+      <div class="refresh-tag" id="refreshTag"><span class="dot"></span> Cargando…</div>
+    </div>
+
+    <div class="kpis" id="kpiRow"></div>
+    <div class="kpi-detail" id="kpiDetail" style="display:none;"></div>
+
+    <div class="quota-section">
+      <h2 id="quotaTitle">Objetivo · Logrado vs. Objetivo</h2>
+      <div class="sub-note">Cerrado (Closed Won) con fecha de cierre dentro del trimestre actual. Objetivo por vendedor configurable en <code>data/quotas.json</code>.</div>
+      <div class="quota-grid" id="quotaGrid"></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="follow">Seguimiento</div>
+      <div class="tab" data-tab="stage">Por etapa</div>
+      <div class="tab" data-tab="forecast">Forecast</div>
+      <div class="tab" data-tab="detalle">Verbal Win / Won / Pipe</div>
+    </div>
+
+    <div id="followView">
+      <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;">
+        Ordenado por <b>días sin seguimiento</b> (los más urgentes arriba). El punto de color indica si hay un tomador de decisión identificado (verde), un influenciador (amarillo), un contacto operativo (gris) o ningún contacto asociado (gris claro). 🔎 = hay insight de Diio disponible; ⏱ = lleva tiempo sin respuesta.
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th data-sort="name">Oportunidad</th>
+            <th data-sort="owner">Owner</th>
+            <th data-sort="stage">Etapa</th>
+            <th data-sort="origen">Origen</th>
+            <th data-sort="amount" style="text-align:right;">Monto</th>
+            <th data-sort="daysSinceContact">Días sin seguimiento</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="stageView" style="display:none;"><div class="board" id="board"></div></div>
+    <div id="forecastView" style="display:none;">
+      <div class="forecast-wrap">
+        <div id="forecastRows"></div>
+        <div class="kpi-detail" id="forecastDetail" style="display:none;margin-top:14px;margin-bottom:0;box-shadow:none;border-style:dashed;"></div>
+        <div class="closed-list" id="closedList"></div>
+      </div>
+    </div>
+    <div id="detalleView" style="display:none;">
+      <div class="detalle-filters" id="detalleFilters"></div>
+      <div class="detalle-sort" id="detalleSort"></div>
+      <div class="detalle-summary" id="detalleSummary"></div>
+      <div class="table-wrap">
+        <table>
+          <thead id="detalleThead"></thead>
+          <tbody id="detalleTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+let DEALS = [];
+let CLOSED_WON_Q3 = [];
+let QUOTAS = {};
+let META = {};
+
+const OWNER_COLORS = {"Jorge Cervera":"#EA580C","Iramar Yeo López Aguado":"#2563EB","Michell Adrian Munayer Lara":"#0D9488","Carlos Enrique Hinojosa Sanchez":"#7C3AED"};
+const OWNER_INITIALS = {"Jorge Cervera":"JC","Iramar Yeo López Aguado":"IY","Michell Adrian Munayer Lara":"MM","Carlos Enrique Hinojosa Sanchez":"CH"};
+const DM_LABELS = {decisor:"Contacto decisor", influencer:"Influenciador", operativo:"Contacto operativo", sin_contacto:"Sin contacto identificado"};
+const STAGE_ORDER = ["Discovery","Qualified","Negotiation","Risk Analysis & Documentation","Internal validation"];
+const VERBAL_WIN_STAGE_IDS = new Set(["13516852","13510790","1335049772","1335049773"]); // Risk Analysis & Internal Validation (MX Sales + MX Viajes)
+
+// Seguridad extra: deals en Lost, Nurturing o todavía en Discovery nunca deben contarse
+// en el Forecast del Q (Discovery se considera muy temprano para proyectar cierre este Q).
+const FORECAST_EXCLUDED_STAGE_KEYWORDS = ["lost", "nurtur", "discovery"];
+function isForecastEligible(d){
+  const s = (d.stage||"").toLowerCase();
+  return !FORECAST_EXCLUDED_STAGE_KEYWORDS.some(k=>s.includes(k));
+}
+
+// Estos se calculan en tiempo real al cargar la página (ver initDashboard), no quedan fijos en el código.
+let CURRENT_QUARTER_END = "";  // último mes del Q actual, formato "YYYY-MM"
+let CURRENT_Q = "";            // formato "YYYY-Q#"
+let WEEK_START = "", WEEK_END = ""; // lunes/viernes de la semana actual
+let NOW = new Date();
+
+function computeCurrentWeekBounds(today){
+  const day = today.getUTCDay(); // 0=domingo..6=sábado
+  const diffToMonday = (day===0) ? -6 : (1-day);
+  const monday = new Date(today); monday.setUTCDate(today.getUTCDate()+diffToMonday);
+  const friday = new Date(monday); friday.setUTCDate(monday.getUTCDate()+4);
+  const f = d => d.toISOString().slice(0,10);
+  return {start: f(monday), end: f(friday)};
+}
+function computeCurrentQuarter(today){
+  const y = today.getUTCFullYear(), m = today.getUTCMonth()+1;
+  const q = Math.ceil(m/3);
+  const endMonth = q*3;
+  return {key: `${y}-Q${q}`, endMonthStr: `${y}-${String(endMonth).padStart(2,"0")}`};
+}
+
+async function initDashboard(){
+  try{
+    const [deals, closed, quotas, diioInsights, meta] = await Promise.all([
+      fetch("data/deals.json").then(r=>r.json()),
+      fetch("data/closed.json").then(r=>r.json()),
+      fetch("data/quotas.json").then(r=>r.json()),
+      fetch("data/diio_insights.json").then(r=>r.json()).catch(()=>({})),
+      fetch("data/meta.json").then(r=>r.json()).catch(()=>null),
+    ]);
+    DEALS = deals.map(d => ({...d, diioInsight: diioInsights[d.id] || null, staleOutreach: (d.daysSinceContact||0) > 14}));
+    CLOSED_WON_Q3 = closed;
+    QUOTAS = quotas;
+    META = meta || {};
+
+    NOW = meta && meta.generatedAt ? new Date(meta.generatedAt) : new Date();
+    const wk = computeCurrentWeekBounds(NOW);
+    WEEK_START = wk.start; WEEK_END = wk.end;
+    if(meta && meta.currentQuarter){
+      CURRENT_Q = meta.currentQuarter;
+      CURRENT_QUARTER_END = meta.quarterEnd ? meta.quarterEnd.slice(0,7) : computeCurrentQuarter(NOW).endMonthStr;
+    } else {
+      const q = computeCurrentQuarter(NOW);
+      CURRENT_Q = q.key; CURRENT_QUARTER_END = q.endMonthStr;
+    }
+
+    document.getElementById("loadingScreen").style.display = "none";
+    document.getElementById("appRoot").style.display = "flex";
+    document.getElementById("refreshTag").innerHTML = `<span class="dot"></span> HubSpot + Diio · actualizado ${NOW.toLocaleString("es-MX",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}`;
+    document.getElementById("quotaTitle").textContent = `Objetivo ${CURRENT_Q.replace("-"," ")} · Logrado vs. Objetivo`;
+    document.getElementById("sideFoot").innerHTML = `Datos de HubSpot + Diio<br>Última actualización: ${NOW.toLocaleDateString("es-MX")}<br>Se refresca solo todos los días.`;
+
+    renderAll();
+  } catch(err){
+    document.getElementById("loadingScreen").innerHTML = `<div style="max-width:420px;text-align:center;">
+      <div style="font-weight:700;margin-bottom:8px;">No se pudieron cargar los datos</div>
+      <div style="font-size:13px;color:var(--ink-soft);">Puede que el sitio se acabe de publicar y todavía no exista <code>data/deals.json</code>, o que GitHub Actions no haya corrido todavía. Revisá la pestaña "Actions" del repo.</div>
+      <div style="font-size:11px;color:var(--ink-faint);margin-top:10px;">${escapeHtml(String(err))}</div>
+    </div>`;
+  }
+}
+
+let state = { owner: "ALL", tab: "follow", sortKey: "daysSinceContact", sortDir: "desc", detalleFilter: "verbal", detalleSortKey: "amount", detalleSortDir: "desc", openKpi: null, openForecast: null };
+
+function fmtMoney(n){ if(!n) return "$0"; return "$" + Math.round(n).toLocaleString("es-MX"); }
+function fmtDealAmount(n){ if(!n) return `<span style="color:var(--ink-faint);font-style:italic;">Por definir</span>`; return fmtMoney(n); }
+function daysAgoStr(dateStr){ if(!dateStr) return 9999; const d=new Date(dateStr+"T00:00:00Z"); return Math.round((NOW-d)/86400000); }
+function heatColor(days){ if(days==null) return "#94A3B8"; if(days<=3) return "var(--ok)"; if(days<=7) return "var(--warn)"; return "var(--danger)"; }
+function heatPct(days){ if(days==null) return 8; return Math.min(100, Math.max(8,(days/21)*100)); }
+function statusBadge(days){ if(days==null) return {t:"Sin dato",bg:"var(--line)",c:"var(--ink-soft)"}; if(days<=3) return {t:"Al día",bg:"var(--ok-soft)",c:"var(--ok)"}; if(days<=7) return {t:"Atender",bg:"var(--warn-soft)",c:"var(--warn)"}; return {t:"Urgente",bg:"var(--danger-soft)",c:"var(--danger)"}; }
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function filteredDeals(){ return state.owner==="ALL" ? DEALS : DEALS.filter(d=>d.owner===state.owner); }
+function filteredClosed(){ return state.owner==="ALL" ? CLOSED_WON_Q3 : CLOSED_WON_Q3.filter(d=>d.owner===state.owner); }
+
+function renderOwnerList(){
+  const owners = ["ALL", ...Object.keys(OWNER_COLORS)];
+  const el = document.getElementById("ownerList");
+  el.innerHTML = owners.map(o=>{
+    const label = o==="ALL" ? "Todo el equipo" : o;
+    const count = o==="ALL" ? DEALS.length : DEALS.filter(d=>d.owner===o).length;
+    const active = state.owner===o ? "active" : "";
+    const initials = o==="ALL" ? "•" : OWNER_INITIALS[o];
+    const bg = o==="ALL" ? "#3A4A6B" : OWNER_COLORS[o];
+    return `<div class="owner-pill ${active}" data-owner="${o}"><div class="avatar" style="background:${bg};color:#fff;">${initials}</div><span>${label}</span><span class="count">${count}</span></div>`;
+  }).join("");
+  el.querySelectorAll(".owner-pill").forEach(p=>p.addEventListener("click",()=>{state.owner=p.dataset.owner; renderAll();}));
+}
+
+function renderQuotaMini(){
+  const el = document.getElementById("quotaMini");
+  el.innerHTML = Object.keys(OWNER_COLORS).map(o=>{
+    const q = QUOTAS[o];
+    const logrado = CLOSED_WON_Q3.filter(d=>d.owner===o).reduce((s,d)=>s+d.amount,0);
+    const pct = q ? Math.min(100, Math.round(100*logrado/q)) : 0;
+    return `<div class="quota-mini-row"><span>${o.split(" ")[0]}</span><span>${q ? pct+"%" : "s/o"}</span></div>
+      <div class="quota-mini-track"><div class="quota-mini-fill" style="width:${pct}%;"></div></div>`;
+  }).join("");
+}
+
+function renderTopbar(){
+  const list = filteredDeals();
+  document.getElementById("pageTitle").textContent = state.owner==="ALL" ? "Pipeline del equipo" : state.owner;
+  document.getElementById("pageMeta").textContent = `${list.length} oportunidades activas (Discovery → Internal Validation) · MX Sales y MX Viajes`;
+}
+
+function renderKPIs(){
+  const list = filteredDeals();
+  const totalAmount = list.reduce((s,d)=>s+(d.amount||0),0);
+  const overdue = list.filter(d=>(d.daysSinceContact||0)>7).length;
+  const newThisWeek = list.filter(d=> d.createDate && d.createDate>=WEEK_START && d.createDate<=WEEK_END).length;
+  const closedQ3 = filteredClosed().reduce((s,d)=>s+d.amount,0);
+
+  const kpis = [
+    {key:"pipeline", label:"Pipeline activo", value: fmtMoney(totalAmount), sub:`${list.length} oportunidades`, cls:""},
+    {key:"week", label:"Nuevas esta semana", value: newThisWeek, sub:"lun 27 jul – vie 31 jul", cls:"accent"},
+    {key:"closed", label:"Cerrado en Q3", value: fmtMoney(closedQ3), sub:`${filteredClosed().length} deals ganados`, cls:"ok"},
+    {key:"risk", label:"En riesgo (>7d)", value: overdue, sub:"necesitan seguimiento ya", cls:"danger"},
+  ];
+  document.getElementById("kpiRow").innerHTML = kpis.map(k=>`<div class="kpi ${state.openKpi===k.key?'kpi-open':''}" data-kpi="${k.key}"><div class="label">${k.label}</div><div class="value ${k.cls}">${k.value}</div><div class="sub">${k.sub}</div></div>`).join("");
+  document.querySelectorAll(".kpi").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.openKpi = state.openKpi===el.dataset.kpi ? null : el.dataset.kpi;
+      renderKPIs(); renderKpiDetail();
+    });
+  });
+}
+
+function kpiDetailRows(key){
+  const list = filteredDeals();
+  if(key==="pipeline") return list.slice().sort((a,b)=>b.amount-a.amount);
+  if(key==="week") return list.filter(d=> d.createDate && d.createDate>=WEEK_START && d.createDate<=WEEK_END).sort((a,b)=>(a.createDate<b.createDate?1:-1));
+  if(key==="closed") return filteredClosed().slice().sort((a,b)=>b.amount-a.amount);
+  if(key==="risk") return list.filter(d=>(d.daysSinceContact||0)>7).sort((a,b)=>(b.daysSinceContact||0)-(a.daysSinceContact||0));
+  return [];
+}
+
+function renderKpiDetail(){
+  const el = document.getElementById("kpiDetail");
+  if(!state.openKpi){ el.style.display="none"; el.innerHTML=""; return; }
+  el.style.display="block";
+  const key = state.openKpi;
+  const titles = {pipeline:"Pipeline activo — todas las oportunidades", week:"Nuevas creadas esta semana (lun 27 – vie 31 jul)", closed:"Cerrado (Won) en Q3", risk:"En riesgo — más de 7 días sin seguimiento"};
+  const rows = kpiDetailRows(key);
+  if(key==="closed"){
+    el.innerHTML = `<div class="kpi-detail-head">${titles[key]} (${rows.length})</div>` +
+      rows.map(d=>`<div class="kpi-detail-row"><span>${escapeHtml(d.name)}</span><span class="owner-chip" style="color:${OWNER_COLORS[d.owner]||'#888'};">${d.owner.split(" ")[0]}</span><span>${fmtMoney(d.amount)}</span><span>${d.closeDate}</span></div>`).join("") || `<div class="kpi-detail-empty">Sin oportunidades en esta vista.</div>`;
+  } else {
+    el.innerHTML = `<div class="kpi-detail-head">${titles[key]} (${rows.length})</div>` +
+      rows.map(d=>`<div class="kpi-detail-row"><span><span class="dm-dot dm-${d.decisionMaker}"></span>${escapeHtml(d.name)}</span><span class="owner-chip" style="color:${OWNER_COLORS[d.owner]||'#888'};">${d.owner.split(" ")[0]}</span><span class="stage-pill" style="font-size:10px;">${d.stage}</span><span>${fmtDealAmount(d.amount)}</span><span style="color:${heatColor(d.daysSinceContact)};font-weight:700;">${d.daysSinceContact??"–"}d</span></div>`).join("") || `<div class="kpi-detail-empty">Sin oportunidades en esta vista.</div>`;
+  }
+}
+
+
+function renderQuotaGrid(){
+  const el = document.getElementById("quotaGrid");
+  const owners = state.owner==="ALL" ? Object.keys(OWNER_COLORS) : [state.owner];
+  el.innerHTML = owners.map(o=>{
+    const q = QUOTAS[o];
+    const logrado = CLOSED_WON_Q3.filter(d=>d.owner===o).reduce((s,d)=>s+d.amount,0);
+    const pct = q ? Math.min(100, Math.round(100*logrado/q)) : null;
+    const color = pct==null ? "#94A3B8" : pct>=100 ? "var(--ok)" : pct>=50 ? "var(--accent)" : "var(--warn)";
+    return `<div class="quota-card">
+      <div class="rep"><div class="avatar" style="width:22px;height:22px;font-size:10px;background:${OWNER_COLORS[o]};color:#fff;">${OWNER_INITIALS[o]}</div>${o}</div>
+      <div class="amounts"><span class="logrado">${fmtMoney(logrado)}</span><span class="objetivo">${q ? "de "+fmtMoney(q) : ""}</span></div>
+      <div class="quota-track"><div class="quota-fill" style="width:${pct||0}%;background:${color};"></div></div>
+      ${pct!=null ? `<span class="quota-pct">${pct}% del objetivo</span>` : `<span class="no-quota-badge">Sin objetivo definido</span>`}
+    </div>`;
+  }).join("");
+  el.style.gridTemplateColumns = owners.length===1 ? "minmax(240px,340px)" : "repeat(4,1fr)";
+}
+
+function renderBoard(){
+  const list = filteredDeals();
+  const byStage = {};
+  list.forEach(d=>{ const s=d.stage||"Otra"; if(!byStage[s]) byStage[s]=[]; byStage[s].push(d); });
+  const stages = Object.keys(byStage).sort((a,b)=>{ const ia=STAGE_ORDER.indexOf(a), ib=STAGE_ORDER.indexOf(b); return (ia===-1?99:ia)-(ib===-1?99:ib); });
+  document.getElementById("board").innerHTML = stages.map(s=>{
+    const deals = byStage[s].slice().sort((a,b)=>(b.daysSinceContact||0)-(a.daysSinceContact||0));
+    return `<div class="col"><div class="col-head"><span class="name">${s}</span><span class="n">${deals.length}</span></div>
+      ${deals.map(d=>`<div class="deal-card" title="${d.contactTitle?escapeHtml(d.contactTitle):DM_LABELS[d.decisionMaker]}">
+        <div class="name"><span class="dm-dot dm-${d.decisionMaker}"></span>${escapeHtml(d.name)}</div>
+        <div class="row2"><span class="amt">${fmtDealAmount(d.amount)}</span><span>${d.origen && d.origen!=="Sin dato" ? d.origen : ""}</span></div>
+        <div class="heat-track"><div class="heat-fill" style="width:${heatPct(d.daysSinceContact)}%;background:${heatColor(d.daysSinceContact)};"></div></div>
+        <div class="footline"><span class="owner-chip" style="color:${OWNER_COLORS[d.owner]||'#888'};">${d.owner.split(" ")[0]}</span><span class="days-chip" style="color:${heatColor(d.daysSinceContact)};">${d.daysSinceContact??"–"} días</span></div>
+        ${d.diioInsight ? `<div class="diio-badge" title="${escapeHtml(d.diioInsight)}">🔎 Diio</div>` : ""}
+      </div>`).join("")}
+    </div>`;
+  }).join("");
+}
+
+function renderTable(){
+  let list = filteredDeals().slice();
+  const {sortKey, sortDir} = state;
+  list.sort((a,b)=>{
+    let va=a[sortKey], vb=b[sortKey];
+    if(sortKey==="amount"||sortKey==="daysSinceContact"){ va=va??-1; vb=vb??-1; }
+    else { va=(va||"").toLowerCase(); vb=(vb||"").toLowerCase(); }
+    if(va<vb) return sortDir==="asc"?-1:1; if(va>vb) return sortDir==="asc"?1:-1; return 0;
+  });
+  document.getElementById("tbody").innerHTML = list.map(d=>{
+    const badge = statusBadge(d.daysSinceContact);
+    return `<tr>
+      <td>
+        <div class="deal-name"><span class="dm-dot dm-${d.decisionMaker}" title="${DM_LABELS[d.decisionMaker]}"></span>${escapeHtml(d.name)}</div>
+        <div class="pipeline-tag">${d.pipeline}${d.contactTitle?" · "+escapeHtml(d.contactTitle):""}</div>
+        ${(!d.diioInsight && d.staleOutreach) ? `<div class="diio-badge" style="color:var(--warn);background:var(--warn-soft);">⏱ Sin respuesta hace ${d.daysSinceContact}d</div>` : ""}
+        ${d.diioInsight ? `<div class="diio-badge" title="${escapeHtml(d.diioInsight)}">🔎 Insight Diio</div>` : ""}
+      </td>
+      <td class="owner-cell"><div class="avatar" style="width:20px;height:20px;font-size:9px;background:${OWNER_COLORS[d.owner]||'#888'};color:#fff;">${OWNER_INITIALS[d.owner]||"?"}</div>${d.owner}</td>
+      <td><span class="stage-pill">${d.stage}</span></td>
+      <td>${d.origen && d.origen!=="Sin dato" ? `<span class="origen-tag">${escapeHtml(d.origen)}</span>` : `<span style="color:var(--ink-faint);">—</span>`}</td>
+      <td class="amount-cell">${fmtDealAmount(d.amount)}</td>
+      <td><div class="heat-cell"><div class="heat-track"><div class="heat-fill" style="width:${heatPct(d.daysSinceContact)}%;background:${heatColor(d.daysSinceContact)};"></div></div><span class="days-num" style="color:${heatColor(d.daysSinceContact)};">${d.daysSinceContact??"–"}</span><span class="status-badge" style="background:${badge.bg};color:${badge.c};">${badge.t}</span></div></td>
+    </tr>`;
+  }).join("");
+}
+
+function quarterKey(monthStr){
+  const [y,m] = monthStr.split("-").map(Number);
+  const q = Math.ceil(m/3);
+  return `${y}-Q${q}`;
+}
+function quarterLabel(qKey){
+  const [y,q] = qKey.split("-Q");
+  return `Q${q} ${y}`;
+}
+function renderForecast(){
+  const list = filteredDeals().filter(isForecastEligible);
+  const byQ = {};
+  list.forEach(d=>{
+    if(!d.expectedCloseMonth) return;
+    const qk = quarterKey(d.expectedCloseMonth);
+    if(!byQ[qk]) byQ[qk]={amt:0,n:0};
+    byQ[qk].amt+=(d.amount||0); byQ[qk].n+=1;
+  });
+  const q3 = byQ[CURRENT_Q] || {amt:0,n:0};
+  const maxAmt = Math.max(q3.amt, 1);
+  const pct = Math.round(100*q3.amt/maxAmt);
+  document.getElementById("forecastRows").innerHTML = `<div class="forecast-row forecast-row-clickable ${state.openForecast==='q3'?'forecast-row-open':''}" data-forecast="q3" style="background:var(--accent-soft);border-radius:8px;padding-left:8px;padding-right:8px;">
+      <div class="forecast-month">${quarterLabel(CURRENT_Q)} <span style="font-size:10px;color:var(--accent);font-weight:700;">· Q actual</span></div>
+      <div class="forecast-track"><div class="forecast-fill" style="width:${pct}%;"></div></div>
+      <div class="forecast-amt">${fmtMoney(q3.amt)}</div>
+      <div class="forecast-n">${q3.n} deals</div>
+    </div>`;
+
+  document.querySelectorAll("[data-forecast]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const key = el.dataset.forecast;
+      state.openForecast = state.openForecast===key ? null : key;
+      renderForecast();
+    });
+  });
+  renderForecastDetail(list);
+
+  // Current-quarter summary: closed-won so far + weighted verbal-win + rest of open pipeline due this Q
+  const closed = filteredClosed();
+  const closedTotal = closed.reduce((s,d)=>s+d.amount,0);
+  const verbalThisQ = list.filter(d => VERBAL_WIN_STAGE_IDS.has(d.stageId) && (!d.expectedCloseMonth || d.expectedCloseMonth <= CURRENT_QUARTER_END));
+  const verbalWeighted = verbalThisQ.reduce((s,d)=>s+(d.amount||0)*((d.stageProbability??50)/100),0);
+  document.getElementById("closedList").innerHTML = `
+    <div style="font-weight:700;margin-bottom:10px;color:var(--ink);">${quarterLabel(CURRENT_Q)} — resumen de cierre</div>
+    <div class="closed-item"><span>Ya cerrado (Won)</span><span><b>${fmtMoney(closedTotal)}</b> · ${closed.length} deals</span></div>
+    <div class="closed-item"><span>Verbal Win ponderado (Risk + Internal Val., cierra este Q)</span><span><b>${fmtMoney(verbalWeighted)}</b> · ${verbalThisQ.length} deals</span></div>
+    <div class="closed-item" style="border-bottom:none;font-weight:700;"><span>Proyección total ${quarterLabel(CURRENT_Q)}</span><span>${fmtMoney(closedTotal+verbalWeighted)}</span></div>
+    <div style="font-weight:700;margin:16px 0 8px;color:var(--ink);">Detalle de lo ya cerrado</div>` +
+    closed.map(d=>`<div class="closed-item"><span>${escapeHtml(d.name)} · ${d.owner.split(" ")[0]}</span><span>${fmtMoney(d.amount)} · ${d.closeDate}</span></div>`).join("");
+}
+
+function renderForecastDetail(list){
+  const el = document.getElementById("forecastDetail");
+  if(!state.openForecast){ el.style.display="none"; el.innerHTML=""; return; }
+  el.style.display="block";
+  const rows = list.filter(d => d.expectedCloseMonth && quarterKey(d.expectedCloseMonth)===CURRENT_Q).sort((a,b)=>b.amount-a.amount);
+  el.innerHTML = `<div class="kpi-detail-head">Oportunidades con cierre esperado en ${quarterLabel(CURRENT_Q)} (${rows.length})</div>` +
+    (rows.map(d=>`<div class="kpi-detail-row"><span><span class="dm-dot dm-${d.decisionMaker}"></span>${escapeHtml(d.name)}</span><span class="owner-chip" style="color:${OWNER_COLORS[d.owner]||'#888'};">${d.owner.split(" ")[0]}</span><span class="stage-pill" style="font-size:10px;">${d.stage}</span><span>${fmtDealAmount(d.amount)}</span></div>`).join("") || `<div class="kpi-detail-empty">Sin oportunidades en esta vista.</div>`);
+}
+
+function renderDetalleSort(){
+  const el = document.getElementById("detalleSort");
+  const options = [
+    {key:"amount", label:"Valor"},
+    {key:"daysSinceContact", label:"Días en seguimiento"},
+  ];
+  el.innerHTML = `<span>Ordenar por:</span>` + options.map(o=>{
+    const active = state.detalleSortKey===o.key;
+    const arrow = active ? (state.detalleSortDir==="desc" ? "▼" : "▲") : "";
+    return `<div class="sort-btn ${active?'active':''}" data-sortkey="${o.key}">${o.label}${arrow?` <span class="arrow">${arrow}</span>`:""}</div>`;
+  }).join("");
+  el.querySelectorAll(".sort-btn").forEach(b=>b.addEventListener("click",()=>{
+    const key = b.dataset.sortkey;
+    if(state.detalleSortKey===key){ state.detalleSortDir = state.detalleSortDir==="desc"?"asc":"desc"; }
+    else { state.detalleSortKey = key; state.detalleSortDir = "desc"; }
+    renderDetalle();
+  }));
+}
+
+function sortRowsByState(rows){
+  const key = state.detalleSortKey, dir = state.detalleSortDir;
+  return rows.slice().sort((a,b)=>{
+    const va = a[key]??-1, vb = b[key]??-1;
+    return dir==="asc" ? va-vb : vb-va;
+  });
+}
+
+function renderDetalleFilters(){
+  const filters = [
+    {key:"verbal", label:"Verbal Win (este Q)"},
+    {key:"won", label:"Won (este Q)"},
+    {key:"pipe", label:"Pipe total"},
+  ];
+  document.getElementById("detalleFilters").innerHTML = filters.map(f=>
+    `<div class="filter-btn ${state.detalleFilter===f.key?'active':''}" data-filter="${f.key}">${f.label}</div>`
+  ).join("");
+  document.querySelectorAll(".filter-btn").forEach(b=>b.addEventListener("click",()=>{ state.detalleFilter=b.dataset.filter; renderDetalle(); }));
+}
+
+function renderDetalle(){
+  renderDetalleFilters();
+  renderDetalleSort();
+  const allActive = filteredDeals();
+  let rows = [];
+  let mode = state.detalleFilter;
+
+  if(mode==="verbal"){
+    // Deals in Risk Analysis / Internal Validation that are due this quarter or earlier (stale/overdue close dates
+    // still count as "closing this Q" since that's the only quarter left for them). Deals explicitly pushed into a
+    // future quarter (close month > current quarter end) are excluded.
+    rows = allActive.filter(d => VERBAL_WIN_STAGE_IDS.has(d.stageId) && (!d.expectedCloseMonth || d.expectedCloseMonth <= CURRENT_QUARTER_END));
+  } else if(mode==="won"){
+    rows = filteredClosed();
+  } else {
+    rows = allActive;
+  }
+
+  const count = rows.length;
+  const totalValue = rows.reduce((s,d)=>s+(d.amount||0),0);
+  const weighted = mode==="won" ? totalValue : rows.reduce((s,d)=>s+(d.amount||0)*((d.stageProbability??50)/100),0);
+
+  document.getElementById("detalleSummary").innerHTML = `
+    <div class="summary-card"><div class="label">Cantidad de deals</div><div class="value">${count}</div><div class="sub">${mode==="verbal"?"Risk Analysis + Internal Validation, cierre "+quarterLabel(CURRENT_Q):mode==="won"?"Closed Won en "+quarterLabel(CURRENT_Q):"Todas las etapas activas"}</div></div>
+    <div class="summary-card"><div class="label">Valor total</div><div class="value">${fmtMoney(totalValue)}</div><div class="sub">Suma de monto (fee mensual)</div></div>
+    <div class="summary-card"><div class="label">Valor ponderado por probabilidad</div><div class="value">${fmtMoney(weighted)}</div><div class="sub">${mode==="won"?"= valor total (ya cerrado)":"monto × % probabilidad de etapa"}</div></div>
+  `;
+
+  if(mode==="won"){
+    document.getElementById("detalleThead").innerHTML = `<tr><th>Oportunidad</th><th>Owner</th><th style="text-align:right;">Monto</th><th>Fecha de cierre</th></tr>`;
+    document.getElementById("detalleTbody").innerHTML = sortRowsByState(rows).map(function(d){
+      return "<tr>"
+        + "<td class=\"deal-name\">" + escapeHtml(d.name) + "</td>"
+        + "<td class=\"owner-cell\"><div class=\"avatar\" style=\"width:20px;height:20px;font-size:9px;background:" + (OWNER_COLORS[d.owner]||'#888') + ";color:#fff;\">" + (OWNER_INITIALS[d.owner]||"?") + "</div>" + d.owner + "</td>"
+        + "<td class=\"amount-cell\">" + fmtMoney(d.amount) + "</td>"
+        + "<td>" + d.closeDate + "</td>"
+        + "</tr>";
+    }).join("");
+  } else {
+    document.getElementById("detalleThead").innerHTML = `<tr><th data-sort2="name">Oportunidad</th><th>Owner</th><th>Etapa</th><th style="text-align:right;">Monto</th><th>Días desde última actividad</th></tr>`;
+    document.getElementById("detalleTbody").innerHTML = sortRowsByState(rows).map(function(d){
+      var stagePill = "<span class=\"stage-pill\">" + d.stage + "</span>";
+      var dayColor = heatColor(d.daysSinceContact);
+      var dayVal = (d.daysSinceContact===null || d.daysSinceContact===undefined) ? "–" : d.daysSinceContact;
+      return "<tr>"
+        + "<td class=\"deal-name\"><span class=\"dm-dot dm-" + d.decisionMaker + "\"></span>" + escapeHtml(d.name) + "</td>"
+        + "<td class=\"owner-cell\"><div class=\"avatar\" style=\"width:20px;height:20px;font-size:9px;background:" + (OWNER_COLORS[d.owner]||'#888') + ";color:#fff;\">" + (OWNER_INITIALS[d.owner]||"?") + "</div>" + d.owner + "</td>"
+        + "<td>" + stagePill + "</td>"
+        + "<td class=\"amount-cell\">" + fmtDealAmount(d.amount) + "</td>"
+        + "<td><span style=\"color:" + dayColor + ";font-weight:700;font-family:'IBM Plex Mono',monospace;\">" + dayVal + "</span></td>"
+        + "</tr>";
+    }).join("");
+  }
+}
+
+function renderAll(){ renderOwnerList(); renderQuotaMini(); renderTopbar(); renderKPIs(); renderKpiDetail(); renderQuotaGrid(); renderBoard(); renderTable(); renderForecast(); renderDetalle(); }
+
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active"); state.tab=t.dataset.tab;
+    document.getElementById("followView").style.display = state.tab==="follow"?"block":"none";
+    document.getElementById("stageView").style.display = state.tab==="stage"?"block":"none";
+    document.getElementById("forecastView").style.display = state.tab==="forecast"?"block":"none";
+    document.getElementById("detalleView").style.display = state.tab==="detalle"?"block":"none";
+  });
+});
+document.querySelectorAll("th[data-sort]").forEach(th=>{
+  th.addEventListener("click",()=>{
+    const key = th.dataset.sort;
+    if(state.sortKey===key){ state.sortDir = state.sortDir==="asc"?"desc":"asc"; }
+    else { state.sortKey=key; state.sortDir = (key==="daysSinceContact"||key==="amount") ? "desc":"asc"; }
+    renderTable();
+  });
+});
+
+initDashboard();
+</script>
+</body>
+</html>
